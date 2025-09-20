@@ -52,7 +52,7 @@ mapping(address => uint256) public userContributionCount; // 用户贡献计数
 
 #### 1. `drawPixel(x, y, color)` - 单点绘制
 ```solidity
-function drawPixel(uint256 x, uint256 y, uint8 color) external
+function drawPixel(uint256 x, uint256 y, uint8[] color) external
 ```
 - **功能**：在指定坐标绘制单个像素
 - **特点**：完全免费，只消耗 gas
@@ -60,7 +60,7 @@ function drawPixel(uint256 x, uint256 y, uint8 color) external
 
 #### 2. `drawPixelsBatch(x[], y[], colors[])` - 批量绘制
 ```solidity
-function drawPixelsBatch(uint256[] calldata x, uint256[] calldata y, uint8[] calldata colors) external
+function drawPixelsBatch(uint256[] calldata x, uint256[] calldata y, uint8[][] calldata colors) external
 ```
 - **功能**：一次性绘制多个像素
 - **优势**：大幅节省 gas，提升绘制效率
@@ -77,8 +77,8 @@ function getUserContributionRatio(address user) external view returns (uint256)
 ### 事件系统
 
 ```solidity
-event PixelChanged(address indexed artist, uint256 indexed pixelIndex, uint256 x, uint256 y, uint8 color);
-event BatchPixelsChanged(address indexed artist, uint256[] pixelIndices, uint8[] colors);
+event PixelChanged(address indexed artist, uint256 indexed pixelIndex, uint256 x, uint256 y, uint8[] color);
+event BatchPixelsChanged(address indexed artist, uint256[] pixelIndices, uint8[][] colors);
 ```
 
 - **实时监听**：前端可以实时监听像素变化

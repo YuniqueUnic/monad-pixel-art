@@ -7,11 +7,11 @@ import "../src/PublicPixelArt.sol";
 contract DeployPublicPixelArt is Script {
     function run() external returns (PublicPixelArt) {
         vm.startBroadcast();
-        
+
         PublicPixelArt pixelArt = new PublicPixelArt();
-        
+
         vm.stopBroadcast();
-        
+
         return pixelArt;
     }
 }
