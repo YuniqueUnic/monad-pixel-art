@@ -48,16 +48,51 @@ forge build
 #### 方式一：使用 forge script 部署
 
 ```bash
-forge script script/DeployPublicPixelArt.s.sol --rpc-url $RPC_URL --broadcast
+forge script script/DeployPublicPixelArt.s.sol --rpc-url $RPC_URL --broadcast --legacy
 ```
 
-#### 方式二：使用 make 命令（如果有 Makefile）
+#### 方式二：使用 make 命令（推荐）
 
 ```bash
+# 仅部署合约
 make deploy
+
+# 部署并自动验证合约（Monad测试网）
+make deploy-and-verify
+
+# 部署并自动验证合约（Monad主网）
+make deploy-and-verify-mainnet
 ```
 
-### 4. 验证部署
+### 4. 验证合约
+
+#### 方式一：部署后自动验证
+
+使用 `make deploy-and-verify` 或 `make deploy-and-verify-mainnet` 命令可以在部署后自动验证合约。
+
+#### 方式二：手动验证已部署的合约
+
+如果你已经部署了合约但尚未验证，可以使用以下命令手动验证：
+
+```bash
+# 验证Monad测试网上的合约
+make verify CONTRACT_ADDRESS=0x...
+
+# 验证Monad主网上的合约
+make verify-mainnet CONTRACT_ADDRESS=0x...
+```
+
+#### 方式三：直接使用 forge 命令验证
+
+```bash
+# 验证Monad测试网上的合约
+forge verify-contract <contract_address> src/PublicPixelArt.sol:PublicPixelArt --chain 10143 --verifier sourcify --verifier-url https://sourcify-api-monad.blockvision.org
+
+# 示例
+forge verify-contract 0x195B9401D1BF64D4D4FFbEecD10aE8c41bEBA453 src/PublicPixelArt.sol:PublicPixelArt --chain 10143 --verifier sourcify --verifier-url https://sourcify-api-monad.blockvision.org
+```
+
+### 5. 验证部署
 
 部署成功后，合约地址会显示在终端输出中。你可以使用以下命令验证合约是否成功部署：
 
@@ -65,6 +100,8 @@ make deploy
 # 查看部署信息
 cast --rpc-url $RPC_URL code <deployed-contract-address>
 ```
+
+验证成功后，你可以在 [Monad Explorer](https://testnet.monadexplorer.com/) (测试网) 或 [Monad Explorer](https://monadexplorer.com/) (主网) 上查看已验证的合约源代码。
 
 ## 部署到不同网络
 
