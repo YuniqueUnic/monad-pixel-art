@@ -7,11 +7,20 @@ pragma solidity ^0.8.13;
  * 基于 Monad 区块链的免费公益像素画板，让全球用户共同创作数字艺术品
  */
 contract PublicPixelArt {
+    // 像素信息结构体
+    struct PixelInfo {
+        uint256 x;
+        uint256 y;
+        uint8[] color;
+        address owner;
+    }
+
     // 核心数据结构
     mapping(uint256 => uint8[]) public pixels; // 像素颜色数据 (RGB数组)
     mapping(uint256 => address) public pixelOwners; // 像素归属记录
     mapping(address => uint256[]) public userContributions; // 用户贡献列表（像素索引）
     mapping(address => uint256) public userContributionCount; // 用户贡献计数
+    PixelInfo[] public allPixels; // 存储所有像素信息的数组
 
     // 统计数据
     uint256 public totalDraws = 0; // 总绘制次数
@@ -74,6 +83,9 @@ contract PublicPixelArt {
             }
         }
 
+        // 添加像素信息到数组
+        allPixels.push(PixelInfo(x, y, color, artist));
+
         totalDraws++;
 
         emit PixelChanged(artist, pixelKey, x, y, color);
@@ -121,6 +133,9 @@ contract PublicPixelArt {
                 userContributions[artist].push(pixelKey);
                 newContributions++;
             }
+
+            // 添加像素信息到数组
+            allPixels.push(PixelInfo(x[i], y[i], colors[i], artist));
         }
 
         // 更新用户贡献计数和统计
@@ -210,6 +225,33 @@ contract PublicPixelArt {
     ) external view returns (address) {
         uint256 pixelKey = getPixelKey(x, y);
         return pixelOwners[pixelKey];
+    }
+
+    /**
+     * @dev 获取所有像素数据
+     * @return x 所有像素的x坐标数组
+     * @return y 所有像素的y坐标数组
+     * @return colors 所有像素的颜色数组
+     */
+    function getPixels()
+        external
+        view
+        returns (
+            uint256[] memory x,
+            uint256[] memory y,
+            uint8[][] memory colors
+        )
+    {
+        uint256 length = allPixels.length;
+        x = new uint256[](length);
+        y = new uint256[](length);
+        colors = new uint8[][](length);
+
+        for (uint256 i = 0; i < length; i++) {
+            x[i] = allPixels[i].x;
+            y[i] = allPixels[i].y;
+            colors[i] = allPixels[i].color;
+        }
     }
 
     /**

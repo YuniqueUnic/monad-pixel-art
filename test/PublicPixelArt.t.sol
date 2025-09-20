@@ -406,4 +406,86 @@ contract PublicPixelArtTest is Test {
         vm.prank(user1);
         pixelArt.drawPixelsBatch(x, y, colors);
     }
+
+    function test_GetPixels() public {
+        // 先绘制一些像素
+        uint8[] memory color1 = new uint8[](3);
+        color1[0] = 255;
+        color1[1] = 0;
+        color1[2] = 0; // 红色
+
+        uint8[] memory color2 = new uint8[](3);
+        color2[0] = 0;
+        color2[1] = 255;
+        color2[2] = 0; // 绿色
+
+        uint8[] memory color3 = new uint8[](3);
+        color3[0] = 0;
+        color3[1] = 0;
+        color3[2] = 255; // 蓝色
+
+        vm.prank(user1);
+        pixelArt.drawPixel(10, 20, color1);
+
+        vm.prank(user2);
+        pixelArt.drawPixel(30, 40, color2);
+
+        vm.prank(user1);
+        pixelArt.drawPixel(50, 60, color3);
+
+        // 获取所有像素数据
+        (
+            uint256[] memory x,
+            uint256[] memory y,
+            uint8[][] memory colors
+        ) = pixelArt.getPixels();
+
+        // 验证返回的数据长度
+        assertEq(x.length, 3);
+        assertEq(y.length, 3);
+        assertEq(colors.length, 3);
+
+        // 验证像素数据（由于数组顺序可能与绘制顺序不同，我们需要检查所有数据是否都存在）
+        bool foundPixel1 = false;
+        bool foundPixel2 = false;
+        bool foundPixel3 = false;
+
+        for (uint256 i = 0; i < x.length; i++) {
+            if (x[i] == 10 && y[i] == 20) {
+                foundPixel1 = true;
+                assertEq(colors[i][0], 255);
+                assertEq(colors[i][1], 0);
+                assertEq(colors[i][2], 0);
+            } else if (x[i] == 30 && y[i] == 40) {
+                foundPixel2 = true;
+                assertEq(colors[i][0], 0);
+                assertEq(colors[i][1], 255);
+                assertEq(colors[i][2], 0);
+            } else if (x[i] == 50 && y[i] == 60) {
+                foundPixel3 = true;
+                assertEq(colors[i][0], 0);
+                assertEq(colors[i][1], 0);
+                assertEq(colors[i][2], 255);
+            }
+        }
+
+        // 确保所有像素都被找到
+        assertTrue(foundPixel1);
+        assertTrue(foundPixel2);
+        assertTrue(foundPixel3);
+    }
+
+    function test_GetPixels_EmptyCanvas() public {
+        // 在空画板上获取像素数据
+        (
+            uint256[] memory x,
+            uint256[] memory y,
+            uint8[][] memory colors
+        ) = pixelArt.getPixels();
+
+        // 验证返回的数据长度为0
+        assertEq(x.length, 0);
+        assertEq(y.length, 0);
+        assertEq(colors.length, 0);
+    }
 }
