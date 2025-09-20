@@ -13,6 +13,11 @@
    npm install dotenv
    ```
 
+3. 准备足够的测试代币
+   - 部署合约需要支付 Gas 费用
+   - 建议至少准备 0.1 MON (Monad测试网代币)
+   - 可以通过 [Monad 测试网水龙头](https://faucet.testnet.monad.xyz/) 获取测试代币
+
 ## 部署步骤
 
 ### 1. 配置环境变量
@@ -140,10 +145,16 @@ forge script script/DeployPublicPixelArt.s.sol --rpc-url $RPC_URL --broadcast
 
 ### 1. 部署失败
 
+#### 错误：Signer had insufficient balance
+如果看到此错误，表示部署账户余额不足：
+- 检查账户余额：`make check-balance`
+- 通过 [Monad 测试网水龙头](https://faucet.testnet.monad.xyz/) 获取测试代币
+- 确保账户至少有 0.1 MON
+
+#### 其他部署失败
 如果部署失败，请检查：
 - 私钥是否正确
 - RPC URL 是否有效
-- 部署账户是否有足够的资金
 - 网络连接是否正常
 
 ### 2. 环境变量未加载
@@ -158,7 +169,20 @@ source .env
 PRIVATE_KEY=0x-your-private-key RPC_URL=https://your-rpc-url forge script script/DeployPublicPixelArt.s.sol --rpc-url $RPC_URL --broadcast
 ```
 
-### 3. 合约编译错误
+### 3. 合约验证失败
+
+#### 错误：Cannot index object with number
+如果在 `deploy-and-verify` 过程中看到此错误：
+- 这是由于 JSON 解析问题导致的
+- 可以先单独部署：`make deploy`
+- 然后手动验证：`make verify CONTRACT_ADDRESS=<合约地址>`
+
+#### 其他验证失败
+- 确保合约地址正确
+- 检查网络是否正确（测试网或主网）
+- 等待几分钟后再试，有时区块链浏览器需要时间同步
+
+### 4. 合约编译错误
 
 如果编译出错，请检查：
 - Solidity 版本是否正确

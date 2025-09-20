@@ -14,7 +14,7 @@ build:
 	forge build
 
 # 部署合约
-deploy: check-env
+deploy: check-env check-balance
 	@echo "开始部署合约..."
 	forge script script/DeployPublicPixelArt.s.sol --rpc-url $(RPC_URL) --broadcast --legacy
 	@echo "合约部署完成，如需验证请运行: make verify CONTRACT_ADDRESS=<合约地址>"
@@ -38,10 +38,17 @@ verify-mainnet: check-env
 	forge verify-contract $(CONTRACT_ADDRESS) src/PublicPixelArt.sol:PublicPixelArt --chain 10143 --verifier sourcify --verifier-url https://sourcify-api-monad.blockvision.org
 
 # 部署并验证合约 (Monad测试网)
-deploy-and-verify: check-env
+deploy-and-verify: check-env check-balance
 	@echo "开始部署并验证合约..."
 	@echo "部署合约..."
-	@CONTRACT_ADDRESS=$$(forge script script/DeployPublicPixelArt.s.sol --rpc-url $(RPC_URL) --broadcast --legacy --json | jq -r '.returns[0].value'); \
+	@forge script script/DeployPublicPixelArt.s.sol --rpc-url $(RPC_URL) --broadcast --legacy --silent
+	@echo "从广播日志中提取合约地址..."
+	@CONTRACT_ADDRESS=$$(grep -o "PublicPixelArt deployed to: 0x[a-fA-F0-9]*" broadcast/latest/1-run-latest.json | cut -d' ' -f4); \
+	if [ -z "$$CONTRACT_ADDRESS" ]; then \
+		echo "错误: 无法从广播日志中提取合约地址"; \
+		echo "请检查 broadcast/latest/1-run-latest.json 文件"; \
+		exit 1; \
+	fi; \
 	echo "合约已部署到: $$CONTRACT_ADDRESS"; \
 	echo "开始验证合约..."; \
 	forge verify-contract $$CONTRACT_ADDRESS src/PublicPixelArt.sol:PublicPixelArt --chain 10143 --verifier sourcify --verifier-url https://sourcify-api-monad.blockvision.org
@@ -52,9 +59,17 @@ deploy-and-verify-mainnet: check-env
 		echo "错误: 请在 .env 文件中设置 MAINNET_RPC_URL"; \
 		exit 1; \
 	fi
+	@$(MAKE) check-balance RPC_URL=$(MAINNET_RPC_URL)
 	@echo "开始部署并验证合约 (Monad主网)..."
 	@echo "部署合约..."
-	@CONTRACT_ADDRESS=$$(forge script script/DeployPublicPixelArt.s.sol --rpc-url $(MAINNET_RPC_URL) --broadcast --legacy --json | jq -r '.returns[0].value'); \
+	@forge script script/DeployPublicPixelArt.s.sol --rpc-url $(MAINNET_RPC_URL) --broadcast --legacy --silent
+	@echo "从广播日志中提取合约地址..."
+	@CONTRACT_ADDRESS=$$(grep -o "PublicPixelArt deployed to: 0x[a-fA-F0-9]*" broadcast/latest/1-run-latest.json | cut -d' ' -f4); \
+	if [ -z "$$CONTRACT_ADDRESS" ]; then \
+		echo "错误: 无法从广播日志中提取合约地址"; \
+		echo "请检查 broadcast/latest/1-run-latest.json 文件"; \
+		exit 1; \
+	fi; \
 	echo "合约已部署到: $$CONTRACT_ADDRESS"; \
 	echo "开始验证合约..."; \
 	forge verify-contract $$CONTRACT_ADDRESS src/PublicPixelArt.sol:PublicPixelArt --chain 10143 --verifier sourcify --verifier-url https://sourcify-api-monad.blockvision.org
@@ -87,6 +102,19 @@ check-env:
 		echo "错误: 请在 .env 文件中设置 RPC_URL"; \
 		exit 1; \
 	fi
+
+# 检查账户余额
+check-balance:
+	@echo "检查账户余额..."
+	@DEPLOYER_ADDRESS=$$(cast wallet address --private-key $$PRIVATE_KEY); \
+	echo "部署者地址: $$DEPLOYER_ADDRESS"; \
+	BALANCE=$$(cast balance $$DEPLOYER_ADDRESS --rpc-url $(RPC_URL)); \
+	echo "账户余额: $$BALANCE wei"; \
+	if [ "$$BALANCE" = "0" ]; then \
+		echo "错误: 账户余额不足，请向地址 $$DEPLOYER_ADDRESS 充值"; \
+		exit 1; \
+	fi; \
+	echo "账户余额充足"
 
 # 导出ABI
 export-abi:
