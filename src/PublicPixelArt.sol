@@ -14,10 +14,9 @@ contract PublicPixelArt {
         uint8[] color;
         address owner;
     }
-
+    
     // 核心数据结构
-    mapping(uint256 => uint8[]) public pixels; // 像素颜色数据 (RGB数组)
-    mapping(uint256 => address) public pixelOwners; // 像素归属记录
+    mapping(uint256 => uint256) public pixelKeyToIndex; // 像素键到数组索引的映射
     mapping(address => uint256[]) public userContributions; // 用户贡献列表（像素索引）
     mapping(address => uint256) public userContributionCount; // 用户贡献计数
     PixelInfo[] public allPixels; // 存储所有像素信息的数组
@@ -67,21 +66,17 @@ contract PublicPixelArt {
 
         uint256 pixelKey = getPixelKey(x, y);
         address artist = msg.sender;
+        uint256 pixelIndex = allPixels.length;
 
-        // 更新像素数据
-        pixels[pixelKey] = color;
+        // 更新像素键到索引的映射
+        pixelKeyToIndex[pixelKey] = pixelIndex;
 
         // 更新贡献记录（如果是新用户或新像素）
-        if (pixelOwners[pixelKey] != artist) {
-            pixelOwners[pixelKey] = artist;
-            userContributions[artist].push(pixelKey);
-            userContributionCount[artist]++;
-
-            // 如果是用户第一次绘制，增加独立贡献者计数
-            if (userContributionCount[artist] == 1) {
-                uniqueContributors++;
-            }
+        if (userContributionCount[artist] == 0) {
+            uniqueContributors++;
         }
+        userContributionCount[artist]++;
+        userContributions[artist].push(pixelIndex);
 
         // 添加像素信息到数组
         allPixels.push(PixelInfo(x, y, color, artist));
@@ -112,7 +107,7 @@ contract PublicPixelArt {
 
         address artist = msg.sender;
         uint256[] memory pixelIndices = new uint256[](length);
-        uint256 newContributions = 0;
+        bool isNewUser = userContributionCount[artist] == 0;
 
         // 处理每个像素
         for (uint256 i = 0; i < length; i++) {
@@ -122,30 +117,23 @@ contract PublicPixelArt {
             );
 
             uint256 pixelKey = getPixelKey(x[i], y[i]);
+            uint256 pixelIndex = allPixels.length;
             pixelIndices[i] = pixelKey;
 
-            // 更新像素数据
-            pixels[pixelKey] = colors[i];
-
-            // 更新贡献记录（如果是新用户或新像素）
-            if (pixelOwners[pixelKey] != artist) {
-                pixelOwners[pixelKey] = artist;
-                userContributions[artist].push(pixelKey);
-                newContributions++;
-            }
+            // 更新像素键到索引的映射
+            pixelKeyToIndex[pixelKey] = pixelIndex;
 
             // 添加像素信息到数组
             allPixels.push(PixelInfo(x[i], y[i], colors[i], artist));
+            
+            // 记录用户贡献
+            userContributions[artist].push(pixelIndex);
         }
 
         // 更新用户贡献计数和统计
-        if (newContributions > 0) {
-            userContributionCount[artist] += newContributions;
-
-            // 如果是用户第一次绘制，增加独立贡献者计数
-            if (userContributionCount[artist] == newContributions) {
-                uniqueContributors++;
-            }
+        userContributionCount[artist] += length;
+        if (isNewUser) {
+            uniqueContributors++;
         }
 
         totalDraws += length;
@@ -165,14 +153,32 @@ contract PublicPixelArt {
     }
 
     /**
-     * @dev 获取用户贡献的像素索引列表
+     * @dev 获取用户贡献的像素信息
      * @param user 用户地址
-     * @return 像素索引数组
+     * @return x 像素x坐标数组
+     * @return y 像素y坐标数组
+     * @return colors 像素颜色数组
      */
     function getUserContributions(
         address user
-    ) external view returns (uint256[] memory) {
-        return userContributions[user];
+    ) external view returns (
+        uint256[] memory x,
+        uint256[] memory y,
+        uint8[][] memory colors
+    ) {
+        uint256[] memory indices = userContributions[user];
+        uint256 length = indices.length;
+        
+        x = new uint256[](length);
+        y = new uint256[](length);
+        colors = new uint8[][](length);
+        
+        for (uint256 i = 0; i < length; i++) {
+            uint256 pixelIndex = indices[i];
+            x[i] = allPixels[pixelIndex].x;
+            y[i] = allPixels[pixelIndex].y;
+            colors[i] = allPixels[pixelIndex].color;
+        }
     }
 
     /**
@@ -210,7 +216,14 @@ contract PublicPixelArt {
         uint256 y
     ) external view returns (uint8[] memory) {
         uint256 pixelKey = getPixelKey(x, y);
-        return pixels[pixelKey];
+        uint256 pixelIndex = pixelKeyToIndex[pixelKey];
+        
+        // 检查像素是否存在
+        if (pixelIndex >= allPixels.length) {
+            return new uint8[](0);
+        }
+        
+        return allPixels[pixelIndex].color;
     }
 
     /**
@@ -224,7 +237,14 @@ contract PublicPixelArt {
         uint256 y
     ) external view returns (address) {
         uint256 pixelKey = getPixelKey(x, y);
-        return pixelOwners[pixelKey];
+        uint256 pixelIndex = pixelKeyToIndex[pixelKey];
+        
+        // 检查像素是否存在
+        if (pixelIndex >= allPixels.length) {
+            return address(0);
+        }
+        
+        return allPixels[pixelIndex].owner;
     }
 
     /**

@@ -51,9 +51,15 @@ contract PublicPixelArtTest is Test {
         assertEq(pixelArt.getUserContributionCount(user1), 1);
 
         // 检查用户贡献列表
-        uint256[] memory contributions = pixelArt.getUserContributions(user1);
-        assertEq(contributions.length, 1);
-        assertEq(contributions[0], pixelArt.getPixelKey(10, 20));
+        (uint256[] memory contribX, uint256[] memory contribY, uint8[][] memory contribColors) = pixelArt.getUserContributions(user1);
+        assertEq(contribX.length, 1);
+        assertEq(contribY.length, 1);
+        assertEq(contribColors.length, 1);
+        assertEq(contribX[0], 10);
+        assertEq(contribY[0], 20);
+        assertEq(contribColors[0][0], 255);
+        assertEq(contribColors[0][1], 0);
+        assertEq(contribColors[0][2], 0);
 
         // 检查统计信息
         (
@@ -166,11 +172,31 @@ contract PublicPixelArtTest is Test {
         assertEq(pixelArt.getUserContributionCount(user1), 3);
 
         // 检查用户贡献列表
-        uint256[] memory contributions = pixelArt.getUserContributions(user1);
-        assertEq(contributions.length, 3);
-        assertEq(contributions[0], pixelArt.getPixelKey(10, 20));
-        assertEq(contributions[1], pixelArt.getPixelKey(30, 40));
-        assertEq(contributions[2], pixelArt.getPixelKey(50, 60));
+        (uint256[] memory contribX, uint256[] memory contribY, uint8[][] memory contribColors) = pixelArt.getUserContributions(user1);
+        assertEq(contribX.length, 3);
+        assertEq(contribY.length, 3);
+        assertEq(contribColors.length, 3);
+        
+        // 验证第一个像素
+        assertEq(contribX[0], 10);
+        assertEq(contribY[0], 20);
+        assertEq(contribColors[0][0], 255);
+        assertEq(contribColors[0][1], 0);
+        assertEq(contribColors[0][2], 0);
+        
+        // 验证第二个像素
+        assertEq(contribX[1], 30);
+        assertEq(contribY[1], 40);
+        assertEq(contribColors[1][0], 0);
+        assertEq(contribColors[1][1], 255);
+        assertEq(contribColors[1][2], 0);
+        
+        // 验证第三个像素
+        assertEq(contribX[2], 50);
+        assertEq(contribY[2], 60);
+        assertEq(contribColors[2][0], 0);
+        assertEq(contribColors[2][1], 0);
+        assertEq(contribColors[2][2], 255);
 
         // 检查统计信息
         assertEq(pixelArt.getCanvasProgress(), 3);
@@ -271,10 +297,24 @@ contract PublicPixelArtTest is Test {
         assertEq(pixelArt.getUserContributionCount(user2), 2); // 用户2绘制了2个像素（包括覆盖的）
 
         // 检查用户2的贡献列表（包含所有绘制的像素）
-        uint256[] memory contributions = pixelArt.getUserContributions(user2);
-        assertEq(contributions.length, 2);
-        assertEq(contributions[0], pixelArt.getPixelKey(10, 20));
-        assertEq(contributions[1], pixelArt.getPixelKey(30, 40));
+        (uint256[] memory contribX, uint256[] memory contribY, uint8[][] memory contribColors) = pixelArt.getUserContributions(user2);
+        assertEq(contribX.length, 2);
+        assertEq(contribY.length, 2);
+        assertEq(contribColors.length, 2);
+        
+        // 验证第一个像素（覆盖的像素）
+        assertEq(contribX[0], 10);
+        assertEq(contribY[0], 20);
+        assertEq(contribColors[0][0], 255);
+        assertEq(contribColors[0][1], 0);
+        assertEq(contribColors[0][2], 0);
+        
+        // 验证第二个像素（新像素）
+        assertEq(contribX[1], 30);
+        assertEq(contribY[1], 40);
+        assertEq(contribColors[1][0], 0);
+        assertEq(contribColors[1][1], 0);
+        assertEq(contribColors[1][2], 255);
     }
 
     function test_GetUserContributionRatio() public {
@@ -445,34 +485,24 @@ contract PublicPixelArtTest is Test {
         assertEq(y.length, 3);
         assertEq(colors.length, 3);
 
-        // 验证像素数据（由于数组顺序可能与绘制顺序不同，我们需要检查所有数据是否都存在）
-        bool foundPixel1 = false;
-        bool foundPixel2 = false;
-        bool foundPixel3 = false;
-
-        for (uint256 i = 0; i < x.length; i++) {
-            if (x[i] == 10 && y[i] == 20) {
-                foundPixel1 = true;
-                assertEq(colors[i][0], 255);
-                assertEq(colors[i][1], 0);
-                assertEq(colors[i][2], 0);
-            } else if (x[i] == 30 && y[i] == 40) {
-                foundPixel2 = true;
-                assertEq(colors[i][0], 0);
-                assertEq(colors[i][1], 255);
-                assertEq(colors[i][2], 0);
-            } else if (x[i] == 50 && y[i] == 60) {
-                foundPixel3 = true;
-                assertEq(colors[i][0], 0);
-                assertEq(colors[i][1], 0);
-                assertEq(colors[i][2], 255);
-            }
-        }
-
-        // 确保所有像素都被找到
-        assertTrue(foundPixel1);
-        assertTrue(foundPixel2);
-        assertTrue(foundPixel3);
+        // 验证像素数据（按照添加顺序）
+        assertEq(x[0], 10);
+        assertEq(y[0], 20);
+        assertEq(colors[0][0], 255);
+        assertEq(colors[0][1], 0);
+        assertEq(colors[0][2], 0);
+        
+        assertEq(x[1], 30);
+        assertEq(y[1], 40);
+        assertEq(colors[1][0], 0);
+        assertEq(colors[1][1], 255);
+        assertEq(colors[1][2], 0);
+        
+        assertEq(x[2], 50);
+        assertEq(y[2], 60);
+        assertEq(colors[2][0], 0);
+        assertEq(colors[2][1], 0);
+        assertEq(colors[2][2], 255);
     }
 
     function test_GetPixels_EmptyCanvas() public {
