@@ -12,28 +12,39 @@ contract ExampleUsage is Script {
         PublicPixelArt pixelArt = new PublicPixelArt();
         
         console.log("PublicPixelArt deployed at:", address(pixelArt));
-        console.log("Canvas size:", pixelArt.CANVAS_WIDTH(), "x", pixelArt.CANVAS_HEIGHT());
-        console.log("Total pixels:", pixelArt.TOTAL_PIXELS());
+        console.log("Canvas size: Unlimited (no fixed dimensions)");
+        console.log("Total pixels: Unlimited (dynamic based on usage)");
         
         // 示例：绘制一些像素
         address user = msg.sender;
         
         // 绘制单个像素
-        pixelArt.drawPixel(10, 10, 255); // 红色
-        pixelArt.drawPixel(11, 10, 0);   // 黑色
-        pixelArt.drawPixel(12, 10, 128); // 灰色
+        uint8[] memory red = new uint8[](3);
+        red[0] = 255; red[1] = 0; red[2] = 0; // RGB红色
+        pixelArt.drawPixel(10, 10, red);
+        
+        uint8[] memory black = new uint8[](3);
+        black[0] = 0; black[1] = 0; black[2] = 0; // RGB黑色
+        pixelArt.drawPixel(11, 10, black);
+        
+        uint8[] memory gray = new uint8[](3);
+        gray[0] = 128; gray[1] = 128; gray[2] = 128; // RGB灰色
+        pixelArt.drawPixel(12, 10, gray);
         
         console.log("Drew 3 individual pixels");
         
         // 批量绘制像素
         uint256[] memory xCoords = new uint256[](5);
         uint256[] memory yCoords = new uint256[](5);
-        uint8[] memory colors = new uint8[](5);
+        uint8[][] memory colors = new uint8[][](5);
         
         for (uint256 i = 0; i < 5; i++) {
             xCoords[i] = 20 + i;
             yCoords[i] = 20;
-            colors[i] = uint8(i * 50); // 不同的颜色
+            colors[i] = new uint8[](3);
+            colors[i][0] = uint8(i * 50); // R
+            colors[i][1] = uint8(255 - i * 50); // G
+            colors[i][2] = uint8(i * 25); // B
         }
         
         pixelArt.drawPixelsBatch(xCoords, yCoords, colors);

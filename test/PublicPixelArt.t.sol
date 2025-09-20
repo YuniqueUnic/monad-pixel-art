@@ -13,61 +13,37 @@ contract PublicPixelArtTest is Test {
         pixelArt = new PublicPixelArt();
     }
     
-    function test_Constants() public view {
-        assertEq(pixelArt.CANVAS_WIDTH(), 100);
-        assertEq(pixelArt.CANVAS_HEIGHT(), 100);
-        assertEq(pixelArt.TOTAL_PIXELS(), 10000);
+    function test_GetPixelKey() public view {
+        uint256 key1 = pixelArt.getPixelKey(10, 20);
+        uint256 key2 = pixelArt.getPixelKey(10, 20);
+        uint256 key3 = pixelArt.getPixelKey(30, 40);
+        
+        // 相同坐标应该生成相同的键
+        assertEq(key1, key2);
+        
+        // 不同坐标应该生成不同的键
+        assert(key1 != key3);
+        
+        // 键应该是确定的（相同的输入总是产生相同的输出）
+        assertEq(pixelArt.getPixelKey(0, 0), pixelArt.getPixelKey(0, 0));
     }
     
-    function test_CoordsToIndex() public view {
-        assertEq(pixelArt.coordsToIndex(0, 0), 0);
-        assertEq(pixelArt.coordsToIndex(99, 0), 99);
-        assertEq(pixelArt.coordsToIndex(0, 99), 9900);
-        assertEq(pixelArt.coordsToIndex(99, 99), 9999);
-        assertEq(pixelArt.coordsToIndex(50, 50), 5050);
-    }
-    
-    function test_CoordsToIndex_RevertWhenOutOfBounds() public {
-        vm.expectRevert("X coordinate out of bounds");
-        pixelArt.coordsToIndex(100, 0);
-        
-        vm.expectRevert("Y coordinate out of bounds");
-        pixelArt.coordsToIndex(0, 100);
-    }
-    
-    function test_IndexToCoords() public view {
-        (uint256 x, uint256 y) = pixelArt.indexToCoords(0);
-        assertEq(x, 0);
-        assertEq(y, 0);
-        
-        (x, y) = pixelArt.indexToCoords(99);
-        assertEq(x, 99);
-        assertEq(y, 0);
-        
-        (x, y) = pixelArt.indexToCoords(9900);
-        assertEq(x, 0);
-        assertEq(y, 99);
-        
-        (x, y) = pixelArt.indexToCoords(9999);
-        assertEq(x, 99);
-        assertEq(y, 99);
-        
-        (x, y) = pixelArt.indexToCoords(5050);
-        assertEq(x, 50);
-        assertEq(y, 50);
-    }
-    
-    function test_IndexToCoords_RevertWhenOutOfBounds() public {
-        vm.expectRevert("Index out of bounds");
-        pixelArt.indexToCoords(10000);
-    }
     
     function test_DrawPixel() public {
+        uint8[] memory color = new uint8[](3);
+        color[0] = 255; // R
+        color[1] = 0;   // G
+        color[2] = 0;   // B
+        
         vm.prank(user1);
-        pixelArt.drawPixel(10, 20, 128);
+        pixelArt.drawPixel(10, 20, color);
         
         // 检查像素颜色
-        assertEq(pixelArt.getPixelColor(10, 20), 128);
+        uint8[] memory retrievedColor = pixelArt.getPixelColor(10, 20);
+        assertEq(retrievedColor.length, 3);
+        assertEq(retrievedColor[0], 255);
+        assertEq(retrievedColor[1], 0);
+        assertEq(retrievedColor[2], 0);
         
         // 检查像素所有者
         assertEq(pixelArt.getPixelOwner(10, 20), user1);
@@ -78,36 +54,47 @@ contract PublicPixelArtTest is Test {
         // 检查用户贡献列表
         uint256[] memory contributions = pixelArt.getUserContributions(user1);
         assertEq(contributions.length, 1);
-        assertEq(contributions[0], pixelArt.coordsToIndex(10, 20));
+        assertEq(contributions[0], pixelArt.getPixelKey(10, 20));
         
         // 检查统计信息
-        (uint256 totalPixels, uint256 totalDraws, uint256 uniqueContributors, uint256 completionPercentage) = 
+        (uint256 totalPixels, uint256 totalDraws, uint256 uniqueContributors, uint256 completionPercentage) =
             pixelArt.getCanvasStats();
-        assertEq(totalPixels, 10000);
+        assertEq(totalPixels, 0); // 不再限制总像素数
         assertEq(totalDraws, 1);
         assertEq(uniqueContributors, 1);
-        assertEq(completionPercentage, 1); // 1 * 10000 / 10000 = 1
+        assertEq(completionPercentage, 10000); // 有绘制即为100%
     }
     
     function test_DrawPixel_RevertWhenColorInvalid() public {
+        uint8[] memory invalidColor = new uint8[](2); // 错误的长度
+        invalidColor[0] = 255;
+        invalidColor[1] = 0;
+        
         vm.prank(user1);
-        // 使用 uint8 的最大值 + 1 来测试边界情况
-        // 但由于编译时检查，我们需要用其他方法
-        // 这里我们测试函数确实在检查颜色值范围
-        pixelArt.drawPixel(10, 20, 255); // 有效值，应该成功
+        vm.expectRevert("Color array must have exactly 3 elements (R, G, B)");
+        pixelArt.drawPixel(10, 20, invalidColor);
     }
     
     function test_DrawPixel_UpdateExistingPixel() public {
         // 用户1绘制像素
+        uint8[] memory color1 = new uint8[](3);
+        color1[0] = 255; color1[1] = 0; color1[2] = 0; // 红色
+        
         vm.prank(user1);
-        pixelArt.drawPixel(10, 20, 128);
+        pixelArt.drawPixel(10, 20, color1);
         
         // 用户2绘制同一个像素
+        uint8[] memory color2 = new uint8[](3);
+        color2[0] = 0; color2[1] = 255; color2[2] = 0; // 绿色
+        
         vm.prank(user2);
-        pixelArt.drawPixel(10, 20, 200);
+        pixelArt.drawPixel(10, 20, color2);
         
         // 检查像素颜色更新
-        assertEq(pixelArt.getPixelColor(10, 20), 200);
+        uint8[] memory retrievedColor = pixelArt.getPixelColor(10, 20);
+        assertEq(retrievedColor[0], 0);
+        assertEq(retrievedColor[1], 255);
+        assertEq(retrievedColor[2], 0);
         
         // 检查像素所有者更新
         assertEq(pixelArt.getPixelOwner(10, 20), user2);
@@ -123,19 +110,35 @@ contract PublicPixelArtTest is Test {
     function test_DrawPixelsBatch() public {
         uint256[] memory x = new uint256[](3);
         uint256[] memory y = new uint256[](3);
-        uint8[] memory colors = new uint8[](3);
+        uint8[][] memory colors = new uint8[][](3);
         
-        x[0] = 10; y[0] = 20; colors[0] = 128;
-        x[1] = 30; y[1] = 40; colors[1] = 200;
-        x[2] = 50; y[2] = 60; colors[2] = 255;
+        // 红色
+        colors[0] = new uint8[](3);
+        colors[0][0] = 255; colors[0][1] = 0; colors[0][2] = 0;
+        x[0] = 10; y[0] = 20;
+        
+        // 绿色
+        colors[1] = new uint8[](3);
+        colors[1][0] = 0; colors[1][1] = 255; colors[1][2] = 0;
+        x[1] = 30; y[1] = 40;
+        
+        // 蓝色
+        colors[2] = new uint8[](3);
+        colors[2][0] = 0; colors[2][1] = 0; colors[2][2] = 255;
+        x[2] = 50; y[2] = 60;
         
         vm.prank(user1);
         pixelArt.drawPixelsBatch(x, y, colors);
         
         // 检查所有像素颜色
-        assertEq(pixelArt.getPixelColor(10, 20), 128);
-        assertEq(pixelArt.getPixelColor(30, 40), 200);
-        assertEq(pixelArt.getPixelColor(50, 60), 255);
+        uint8[] memory color1 = pixelArt.getPixelColor(10, 20);
+        assertEq(color1[0], 255); assertEq(color1[1], 0); assertEq(color1[2], 0);
+        
+        uint8[] memory color2 = pixelArt.getPixelColor(30, 40);
+        assertEq(color2[0], 0); assertEq(color2[1], 255); assertEq(color2[2], 0);
+        
+        uint8[] memory color3 = pixelArt.getPixelColor(50, 60);
+        assertEq(color3[0], 0); assertEq(color3[1], 0); assertEq(color3[2], 255);
         
         // 检查用户贡献计数
         assertEq(pixelArt.getUserContributionCount(user1), 3);
@@ -143,9 +146,9 @@ contract PublicPixelArtTest is Test {
         // 检查用户贡献列表
         uint256[] memory contributions = pixelArt.getUserContributions(user1);
         assertEq(contributions.length, 3);
-        assertEq(contributions[0], pixelArt.coordsToIndex(10, 20));
-        assertEq(contributions[1], pixelArt.coordsToIndex(30, 40));
-        assertEq(contributions[2], pixelArt.coordsToIndex(50, 60));
+        assertEq(contributions[0], pixelArt.getPixelKey(10, 20));
+        assertEq(contributions[1], pixelArt.getPixelKey(30, 40));
+        assertEq(contributions[2], pixelArt.getPixelKey(50, 60));
         
         // 检查统计信息
         assertEq(pixelArt.getCanvasProgress(), 3);
@@ -154,7 +157,7 @@ contract PublicPixelArtTest is Test {
     function test_DrawPixelsBatch_RevertWhenArrayLengthsMismatch() public {
         uint256[] memory x = new uint256[](2);
         uint256[] memory y = new uint256[](3);
-        uint8[] memory colors = new uint8[](2);
+        uint8[][] memory colors = new uint8[][](2);
         
         vm.prank(user1);
         vm.expectRevert("Array lengths must match");
@@ -164,7 +167,7 @@ contract PublicPixelArtTest is Test {
     function test_DrawPixelsBatch_RevertWhenArraysEmpty() public {
         uint256[] memory x = new uint256[](0);
         uint256[] memory y = new uint256[](0);
-        uint8[] memory colors = new uint8[](0);
+        uint8[][] memory colors = new uint8[][](0);
         
         vm.prank(user1);
         vm.expectRevert("Arrays cannot be empty");
@@ -174,7 +177,7 @@ contract PublicPixelArtTest is Test {
     function test_DrawPixelsBatch_RevertWhenBatchSizeTooLarge() public {
         uint256[] memory x = new uint256[](101);
         uint256[] memory y = new uint256[](101);
-        uint8[] memory colors = new uint8[](101);
+        uint8[][] memory colors = new uint8[][](101);
         
         vm.prank(user1);
         vm.expectRevert("Batch size cannot exceed 100");
@@ -184,37 +187,48 @@ contract PublicPixelArtTest is Test {
     function test_DrawPixelsBatch_ValidColorValues() public {
         uint256[] memory x = new uint256[](1);
         uint256[] memory y = new uint256[](1);
-        uint8[] memory colors = new uint8[](1);
+        uint8[][] memory colors = new uint8[][](1);
         
-        // 测试边界值
-        colors[0] = 0; // 最小值
-        vm.prank(user1);
-        pixelArt.drawPixelsBatch(x, y, colors); // 应该成功
+        // 测试有效的RGB颜色
+        colors[0] = new uint8[](3);
+        colors[0][0] = 255; colors[0][1] = 0; colors[0][2] = 0; // 红色
         
-        colors[0] = 255; // 最大值
         vm.prank(user1);
         pixelArt.drawPixelsBatch(x, y, colors); // 应该成功
     }
     
     function test_DrawPixelsBatch_MixedNewAndExistingPixels() public {
         // 用户1先绘制一些像素
+        uint8[] memory color1 = new uint8[](3);
+        color1[0] = 128; color1[1] = 128; color1[2] = 128; // 灰色
+        
         vm.prank(user1);
-        pixelArt.drawPixel(10, 20, 128);
+        pixelArt.drawPixel(10, 20, color1);
         
         // 用户2批量绘制，包含用户1的像素和新像素
         uint256[] memory x = new uint256[](2);
         uint256[] memory y = new uint256[](2);
-        uint8[] memory colors = new uint8[](2);
+        uint8[][] memory colors = new uint8[][](2);
         
-        x[0] = 10; y[0] = 20; colors[0] = 200;  // 已存在的像素
-        x[1] = 30; y[1] = 40; colors[1] = 255;  // 新像素
+        // 红色 - 覆盖现有像素
+        colors[0] = new uint8[](3);
+        colors[0][0] = 255; colors[0][1] = 0; colors[0][2] = 0;
+        x[0] = 10; y[0] = 20;
+        
+        // 蓝色 - 新像素
+        colors[1] = new uint8[](3);
+        colors[1][0] = 0; colors[1][1] = 0; colors[1][2] = 255;
+        x[1] = 30; y[1] = 40;
         
         vm.prank(user2);
         pixelArt.drawPixelsBatch(x, y, colors);
         
         // 检查像素颜色
-        assertEq(pixelArt.getPixelColor(10, 20), 200);
-        assertEq(pixelArt.getPixelColor(30, 40), 255);
+        uint8[] memory retrievedColor1 = pixelArt.getPixelColor(10, 20);
+        assertEq(retrievedColor1[0], 255); assertEq(retrievedColor1[1], 0); assertEq(retrievedColor1[2], 0);
+        
+        uint8[] memory retrievedColor2 = pixelArt.getPixelColor(30, 40);
+        assertEq(retrievedColor2[0], 0); assertEq(retrievedColor2[1], 0); assertEq(retrievedColor2[2], 255);
         
         // 检查用户贡献计数
         assertEq(pixelArt.getUserContributionCount(user1), 1);
@@ -223,83 +237,105 @@ contract PublicPixelArtTest is Test {
         // 检查用户2的贡献列表（包含所有绘制的像素）
         uint256[] memory contributions = pixelArt.getUserContributions(user2);
         assertEq(contributions.length, 2);
-        assertEq(contributions[0], pixelArt.coordsToIndex(10, 20));
-        assertEq(contributions[1], pixelArt.coordsToIndex(30, 40));
+        assertEq(contributions[0], pixelArt.getPixelKey(10, 20));
+        assertEq(contributions[1], pixelArt.getPixelKey(30, 40));
     }
     
     function test_GetUserContributionRatio() public {
         // 初始比例应该为0
         assertEq(pixelArt.getUserContributionRatio(user1), 0);
         
-        // 用户1绘制10个像素（减少数量以便观察）
-        for (uint256 i = 0; i < 10; i++) {
+        // 用户1绘制3个像素
+        uint8[] memory color = new uint8[](3);
+        color[0] = 255; color[1] = 0; color[2] = 0; // 红色
+        
+        for (uint256 i = 0; i < 3; i++) {
             vm.prank(user1);
-            pixelArt.drawPixel(i, 0, 128);
+            pixelArt.drawPixel(i, 0, color);
         }
         
-        // 检查比例：10/10000 = 0.1% = 10基点
-        assertEq(pixelArt.getUserContributionRatio(user1), 10);
+        // 检查比例：现在简化了计算逻辑
+        assertEq(pixelArt.getUserContributionRatio(user1), 10000); // 有贡献即为100%
         
-        // 用户2绘制10个像素
-        for (uint256 i = 0; i < 10; i++) {
+        // 用户2绘制2个像素
+        uint8[] memory color2 = new uint8[](3);
+        color2[0] = 0; color2[1] = 255; color2[2] = 0; // 绿色
+        
+        for (uint256 i = 0; i < 2; i++) {
             vm.prank(user2);
-            pixelArt.drawPixel(i, 1, 200);
+            pixelArt.drawPixel(i, 1, color2);
         }
         
-        // 检查比例：每个用户都是10/10000 = 0.1% = 10基点
-        assertEq(pixelArt.getUserContributionRatio(user1), 10);
-        assertEq(pixelArt.getUserContributionRatio(user2), 10);
+        // 检查比例：每个用户都有贡献，都是100%
+        assertEq(pixelArt.getUserContributionRatio(user1), 10000);
+        assertEq(pixelArt.getUserContributionRatio(user2), 10000);
     }
     
     function test_GetCanvasStats() public {
         // 初始状态
-        (uint256 totalPixels, uint256 totalDraws, uint256 uniqueContributors, uint256 completionPercentage) = 
+        (uint256 totalPixels, uint256 totalDraws, uint256 uniqueContributors, uint256 completionPercentage) =
             pixelArt.getCanvasStats();
-        assertEq(totalPixels, 10000);
+        assertEq(totalPixels, 0); // 不再限制总像素数
         assertEq(totalDraws, 0);
         assertEq(uniqueContributors, 0);
         assertEq(completionPercentage, 0);
         
         // 用户1绘制一些像素
+        uint8[] memory color1 = new uint8[](3);
+        color1[0] = 255; color1[1] = 0; color1[2] = 0; // 红色
+        
         vm.prank(user1);
-        pixelArt.drawPixel(10, 20, 128);
+        pixelArt.drawPixel(10, 20, color1);
         
         // 用户2绘制一些像素
+        uint8[] memory color2 = new uint8[](3);
+        color2[0] = 0; color2[1] = 255; color2[2] = 0; // 绿色
+        
         vm.prank(user2);
-        pixelArt.drawPixel(30, 40, 200);
+        pixelArt.drawPixel(30, 40, color2);
         
         // 检查更新后的统计信息
-        (totalPixels, totalDraws, uniqueContributors, completionPercentage) = 
+        (totalPixels, totalDraws, uniqueContributors, completionPercentage) =
             pixelArt.getCanvasStats();
-        assertEq(totalPixels, 10000);
+        assertEq(totalPixels, 0); // 不再限制总像素数
         assertEq(totalDraws, 2);
         assertEq(uniqueContributors, 2);
-        assertEq(completionPercentage, 2); // 2 * 10000 / 10000 = 2
+        assertEq(completionPercentage, 10000); // 有绘制即为100%
     }
     
     function test_PixelChangedEvent() public {
         uint256 expectedIndex = pixelArt.coordsToIndex(10, 20);
+        uint8[] memory color = new uint8[](3);
+        color[0] = 255; color[1] = 0; color[2] = 0; // 红色
+        
         vm.expectEmit(true, true, false, true);
-        emit PublicPixelArt.PixelChanged(user1, expectedIndex, 10, 20, 128);
+        emit PublicPixelArt.PixelChanged(user1, expectedKey, 10, 20, color);
         
         vm.prank(user1);
-        pixelArt.drawPixel(10, 20, 128);
+        pixelArt.drawPixel(10, 20, color);
     }
     
     function test_BatchPixelsChangedEvent() public {
         uint256[] memory x = new uint256[](2);
         uint256[] memory y = new uint256[](2);
-        uint8[] memory colors = new uint8[](2);
+        uint8[][] memory colors = new uint8[][](2);
         
-        x[0] = 10; y[0] = 20; colors[0] = 128;
-        x[1] = 30; y[1] = 40; colors[1] = 200;
+        // 红色
+        colors[0] = new uint8[](3);
+        colors[0][0] = 255; colors[0][1] = 0; colors[0][2] = 0;
+        x[0] = 10; y[0] = 20;
         
-        uint256[] memory expectedIndices = new uint256[](2);
-        expectedIndices[0] = pixelArt.coordsToIndex(10, 20);
-        expectedIndices[1] = pixelArt.coordsToIndex(30, 40);
+        // 绿色
+        colors[1] = new uint8[](3);
+        colors[1][0] = 0; colors[1][1] = 255; colors[1][2] = 0;
+        x[1] = 30; y[1] = 40;
+        
+        uint256[] memory expectedKeys = new uint256[](2);
+        expectedKeys[0] = pixelArt.getPixelKey(10, 20);
+        expectedKeys[1] = pixelArt.getPixelKey(30, 40);
         
         vm.expectEmit(true, false, false, false);
-        emit PublicPixelArt.BatchPixelsChanged(user1, expectedIndices, x, y, colors);
+        emit PublicPixelArt.BatchPixelsChanged(user1, expectedKeys, x, y, colors);
         
         vm.prank(user1);
         pixelArt.drawPixelsBatch(x, y, colors);
