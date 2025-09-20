@@ -51,7 +51,8 @@ contract PublicPixelArtTest is Test {
         assertEq(pixelArt.getUserContributionCount(user1), 1);
 
         // 检查用户贡献列表
-        (uint256[] memory contribX, uint256[] memory contribY, uint8[][] memory contribColors) = pixelArt.getUserContributions(user1);
+        (uint256[] memory contribX, uint256[] memory contribY, uint8[][] memory contribColors) =
+            pixelArt.getUserContributions(user1);
         assertEq(contribX.length, 1);
         assertEq(contribY.length, 1);
         assertEq(contribColors.length, 1);
@@ -62,12 +63,8 @@ contract PublicPixelArtTest is Test {
         assertEq(contribColors[0][2], 0);
 
         // 检查统计信息
-        (
-            uint256 totalPixels,
-            uint256 totalDraws,
-            uint256 uniqueContributors,
-            uint256 completionPercentage
-        ) = pixelArt.getCanvasStats();
+        (uint256 totalPixels, uint256 totalDraws, uint256 uniqueContributors, uint256 completionPercentage) =
+            pixelArt.getCanvasStats();
         assertEq(totalPixels, 0); // 不再限制总像素数
         assertEq(totalDraws, 1);
         assertEq(uniqueContributors, 1);
@@ -172,25 +169,26 @@ contract PublicPixelArtTest is Test {
         assertEq(pixelArt.getUserContributionCount(user1), 3);
 
         // 检查用户贡献列表
-        (uint256[] memory contribX, uint256[] memory contribY, uint8[][] memory contribColors) = pixelArt.getUserContributions(user1);
+        (uint256[] memory contribX, uint256[] memory contribY, uint8[][] memory contribColors) =
+            pixelArt.getUserContributions(user1);
         assertEq(contribX.length, 3);
         assertEq(contribY.length, 3);
         assertEq(contribColors.length, 3);
-        
+
         // 验证第一个像素
         assertEq(contribX[0], 10);
         assertEq(contribY[0], 20);
         assertEq(contribColors[0][0], 255);
         assertEq(contribColors[0][1], 0);
         assertEq(contribColors[0][2], 0);
-        
+
         // 验证第二个像素
         assertEq(contribX[1], 30);
         assertEq(contribY[1], 40);
         assertEq(contribColors[1][0], 0);
         assertEq(contribColors[1][1], 255);
         assertEq(contribColors[1][2], 0);
-        
+
         // 验证第三个像素
         assertEq(contribX[2], 50);
         assertEq(contribY[2], 60);
@@ -297,18 +295,19 @@ contract PublicPixelArtTest is Test {
         assertEq(pixelArt.getUserContributionCount(user2), 2); // 用户2绘制了2个像素（包括覆盖的）
 
         // 检查用户2的贡献列表（包含所有绘制的像素）
-        (uint256[] memory contribX, uint256[] memory contribY, uint8[][] memory contribColors) = pixelArt.getUserContributions(user2);
+        (uint256[] memory contribX, uint256[] memory contribY, uint8[][] memory contribColors) =
+            pixelArt.getUserContributions(user2);
         assertEq(contribX.length, 2);
         assertEq(contribY.length, 2);
         assertEq(contribColors.length, 2);
-        
+
         // 验证第一个像素（覆盖的像素）
         assertEq(contribX[0], 10);
         assertEq(contribY[0], 20);
         assertEq(contribColors[0][0], 255);
         assertEq(contribColors[0][1], 0);
         assertEq(contribColors[0][2], 0);
-        
+
         // 验证第二个像素（新像素）
         assertEq(contribX[1], 30);
         assertEq(contribY[1], 40);
@@ -353,12 +352,8 @@ contract PublicPixelArtTest is Test {
 
     function test_GetCanvasStats() public {
         // 初始状态
-        (
-            uint256 totalPixels,
-            uint256 totalDraws,
-            uint256 uniqueContributors,
-            uint256 completionPercentage
-        ) = pixelArt.getCanvasStats();
+        (uint256 totalPixels, uint256 totalDraws, uint256 uniqueContributors, uint256 completionPercentage) =
+            pixelArt.getCanvasStats();
         assertEq(totalPixels, 0); // 不再限制总像素数
         assertEq(totalDraws, 0);
         assertEq(uniqueContributors, 0);
@@ -383,12 +378,7 @@ contract PublicPixelArtTest is Test {
         pixelArt.drawPixel(30, 40, color2);
 
         // 检查更新后的统计信息
-        (
-            totalPixels,
-            totalDraws,
-            uniqueContributors,
-            completionPercentage
-        ) = pixelArt.getCanvasStats();
+        (totalPixels, totalDraws, uniqueContributors, completionPercentage) = pixelArt.getCanvasStats();
         assertEq(totalPixels, 0); // 不再限制总像素数
         assertEq(totalDraws, 2);
         assertEq(uniqueContributors, 2);
@@ -435,13 +425,7 @@ contract PublicPixelArtTest is Test {
         expectedKeys[1] = pixelArt.getPixelKey(30, 40);
 
         vm.expectEmit(true, false, false, false);
-        emit PublicPixelArt.BatchPixelsChanged(
-            user1,
-            expectedKeys,
-            x,
-            y,
-            colors
-        );
+        emit PublicPixelArt.BatchPixelsChanged(user1, expectedKeys, x, y, colors);
 
         vm.prank(user1);
         pixelArt.drawPixelsBatch(x, y, colors);
@@ -474,11 +458,7 @@ contract PublicPixelArtTest is Test {
         pixelArt.drawPixel(50, 60, color3);
 
         // 获取所有像素数据
-        (
-            uint256[] memory x,
-            uint256[] memory y,
-            uint8[][] memory colors
-        ) = pixelArt.getPixels();
+        (uint256[] memory x, uint256[] memory y, uint8[][] memory colors) = pixelArt.getPixels();
 
         // 验证返回的数据长度
         assertEq(x.length, 3);
@@ -491,13 +471,13 @@ contract PublicPixelArtTest is Test {
         assertEq(colors[0][0], 255);
         assertEq(colors[0][1], 0);
         assertEq(colors[0][2], 0);
-        
+
         assertEq(x[1], 30);
         assertEq(y[1], 40);
         assertEq(colors[1][0], 0);
         assertEq(colors[1][1], 255);
         assertEq(colors[1][2], 0);
-        
+
         assertEq(x[2], 50);
         assertEq(y[2], 60);
         assertEq(colors[2][0], 0);
@@ -507,11 +487,7 @@ contract PublicPixelArtTest is Test {
 
     function test_GetPixels_EmptyCanvas() public {
         // 在空画板上获取像素数据
-        (
-            uint256[] memory x,
-            uint256[] memory y,
-            uint8[][] memory colors
-        ) = pixelArt.getPixels();
+        (uint256[] memory x, uint256[] memory y, uint8[][] memory colors) = pixelArt.getPixels();
 
         // 验证返回的数据长度为0
         assertEq(x.length, 0);

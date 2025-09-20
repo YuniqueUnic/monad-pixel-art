@@ -14,7 +14,7 @@ contract PublicPixelArt {
         uint8[] color;
         address owner;
     }
-    
+
     // 核心数据结构
     mapping(uint256 => uint256) public pixelKeyToIndex; // 像素键到数组索引的映射
     mapping(address => uint256[]) public userContributions; // 用户贡献列表（像素索引）
@@ -26,20 +26,10 @@ contract PublicPixelArt {
     uint256 public uniqueContributors = 0; // 独立贡献者数量
 
     // 事件定义
-    event PixelChanged(
-        address indexed artist,
-        uint256 indexed pixelIndex,
-        uint256 x,
-        uint256 y,
-        uint8[] color
-    );
+    event PixelChanged(address indexed artist, uint256 indexed pixelIndex, uint256 x, uint256 y, uint8[] color);
 
     event BatchPixelsChanged(
-        address indexed artist,
-        uint256[] pixelIndices,
-        uint256[] xCoords,
-        uint256[] yCoords,
-        uint8[][] colors
+        address indexed artist, uint256[] pixelIndices, uint256[] xCoords, uint256[] yCoords, uint8[][] colors
     );
 
     /**
@@ -59,10 +49,7 @@ contract PublicPixelArt {
      * @param color 颜色值 (RGB数组，通常为[R, G, B])
      */
     function drawPixel(uint256 x, uint256 y, uint8[] memory color) external {
-        require(
-            color.length == 3,
-            "Color array must have exactly 3 elements (R, G, B)"
-        );
+        require(color.length == 3, "Color array must have exactly 3 elements (R, G, B)");
 
         uint256 pixelKey = getPixelKey(x, y);
         address artist = msg.sender;
@@ -92,16 +79,9 @@ contract PublicPixelArt {
      * @param y y坐标数组
      * @param colors 颜色值数组（RGB数组）
      */
-    function drawPixelsBatch(
-        uint256[] calldata x,
-        uint256[] calldata y,
-        uint8[][] calldata colors
-    ) external {
+    function drawPixelsBatch(uint256[] calldata x, uint256[] calldata y, uint8[][] calldata colors) external {
         uint256 length = x.length;
-        require(
-            length == y.length && length == colors.length,
-            "Array lengths must match"
-        );
+        require(length == y.length && length == colors.length, "Array lengths must match");
         require(length > 0, "Arrays cannot be empty");
         require(length <= 100, "Batch size cannot exceed 100");
 
@@ -111,10 +91,7 @@ contract PublicPixelArt {
 
         // 处理每个像素
         for (uint256 i = 0; i < length; i++) {
-            require(
-                colors[i].length == 3,
-                "Each color array must have exactly 3 elements (R, G, B)"
-            );
+            require(colors[i].length == 3, "Each color array must have exactly 3 elements (R, G, B)");
 
             uint256 pixelKey = getPixelKey(x[i], y[i]);
             uint256 pixelIndex = allPixels.length;
@@ -125,7 +102,7 @@ contract PublicPixelArt {
 
             // 添加像素信息到数组
             allPixels.push(PixelInfo(x[i], y[i], colors[i], artist));
-            
+
             // 记录用户贡献
             userContributions[artist].push(pixelIndex);
         }
@@ -146,9 +123,7 @@ contract PublicPixelArt {
      * @param user 用户地址
      * @return 贡献的像素数量
      */
-    function getUserContributionCount(
-        address user
-    ) external view returns (uint256) {
+    function getUserContributionCount(address user) external view returns (uint256) {
         return userContributionCount[user];
     }
 
@@ -159,20 +134,18 @@ contract PublicPixelArt {
      * @return y 像素y坐标数组
      * @return colors 像素颜色数组
      */
-    function getUserContributions(
-        address user
-    ) external view returns (
-        uint256[] memory x,
-        uint256[] memory y,
-        uint8[][] memory colors
-    ) {
+    function getUserContributions(address user)
+        external
+        view
+        returns (uint256[] memory x, uint256[] memory y, uint8[][] memory colors)
+    {
         uint256[] memory indices = userContributions[user];
         uint256 length = indices.length;
-        
+
         x = new uint256[](length);
         y = new uint256[](length);
         colors = new uint8[][](length);
-        
+
         for (uint256 i = 0; i < length; i++) {
             uint256 pixelIndex = indices[i];
             x[i] = allPixels[pixelIndex].x;
@@ -186,9 +159,7 @@ contract PublicPixelArt {
      * @param user 用户地址
      * @return 贡献比例（基点）
      */
-    function getUserContributionRatio(
-        address user
-    ) external view returns (uint256) {
+    function getUserContributionRatio(address user) external view returns (uint256) {
         if (totalDraws == 0) {
             return 0;
         }
@@ -211,18 +182,15 @@ contract PublicPixelArt {
      * @param y y坐标
      * @return 颜色值 (RGB数组)
      */
-    function getPixelColor(
-        uint256 x,
-        uint256 y
-    ) external view returns (uint8[] memory) {
+    function getPixelColor(uint256 x, uint256 y) external view returns (uint8[] memory) {
         uint256 pixelKey = getPixelKey(x, y);
         uint256 pixelIndex = pixelKeyToIndex[pixelKey];
-        
+
         // 检查像素是否存在
         if (pixelIndex >= allPixels.length) {
             return new uint8[](0);
         }
-        
+
         return allPixels[pixelIndex].color;
     }
 
@@ -232,18 +200,15 @@ contract PublicPixelArt {
      * @param y y坐标
      * @return 像素所有者地址
      */
-    function getPixelOwner(
-        uint256 x,
-        uint256 y
-    ) external view returns (address) {
+    function getPixelOwner(uint256 x, uint256 y) external view returns (address) {
         uint256 pixelKey = getPixelKey(x, y);
         uint256 pixelIndex = pixelKeyToIndex[pixelKey];
-        
+
         // 检查像素是否存在
         if (pixelIndex >= allPixels.length) {
             return address(0);
         }
-        
+
         return allPixels[pixelIndex].owner;
     }
 
@@ -253,15 +218,7 @@ contract PublicPixelArt {
      * @return y 所有像素的y坐标数组
      * @return colors 所有像素的颜色数组
      */
-    function getPixels()
-        external
-        view
-        returns (
-            uint256[] memory x,
-            uint256[] memory y,
-            uint8[][] memory colors
-        )
-    {
+    function getPixels() external view returns (uint256[] memory x, uint256[] memory y, uint8[][] memory colors) {
         uint256 length = allPixels.length;
         x = new uint256[](length);
         y = new uint256[](length);

@@ -57,22 +57,14 @@ contract ExampleUsage is Script {
         console.log("Drew 5 pixels in batch");
 
         // 获取统计信息
-        (
-            uint256 totalPixels,
-            uint256 totalDraws,
-            uint256 uniqueContributors,
-            uint256 completionPercentage
-        ) = pixelArt.getCanvasStats();
+        (uint256 totalPixels, uint256 totalDraws, uint256 uniqueContributors, uint256 completionPercentage) =
+            pixelArt.getCanvasStats();
 
         console.log("Canvas Stats:");
         console.log("  Total pixels:", totalPixels);
         console.log("  Total draws:", totalDraws);
         console.log("  Unique contributors:", uniqueContributors);
-        console.log(
-            "  Completion percentage:",
-            completionPercentage,
-            "basis points"
-        );
+        console.log("  Completion percentage:", completionPercentage, "basis points");
 
         // 获取用户贡献信息
         uint256 userContributionCount = pixelArt.getUserContributionCount(user);
@@ -80,11 +72,7 @@ contract ExampleUsage is Script {
 
         console.log("User Contribution:");
         console.log("  Contribution count:", userContributionCount);
-        console.log(
-            "  Contribution ratio:",
-            userContributionRatio,
-            "basis points"
-        );
+        console.log("  Contribution ratio:", userContributionRatio, "basis points");
 
         vm.stopBroadcast();
     }
